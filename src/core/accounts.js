@@ -387,6 +387,7 @@ Accounts.prototype.setAccountAndGet = function (data, cb) {
   });
 }
 
+//对新区块的创建者进行数据更新，创建者其实就是这个注册了受托人的节点
 Accounts.prototype.mergeAccountAndGet = function (data, cb) {
   var address = data.address || null;
   if (address === null) {
