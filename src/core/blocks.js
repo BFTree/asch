@@ -346,6 +346,7 @@ private.getByField = function (field, cb) {
 }
 
 private.saveBlock = function (block, cb) {
+    //存储区块
   library.base.block.dbSave(block, function (err) {
     if (err) {
       return cb(err);
@@ -353,6 +354,7 @@ private.saveBlock = function (block, cb) {
 
     async.eachSeries(block.transactions, function (transaction, cb) {
       transaction.blockId = block.id;
+      //存储交易列表
       library.base.transaction.dbSave(transaction, cb);
     }, cb);
   });
@@ -705,6 +707,7 @@ Blocks.prototype.loadBlocksOffset = function (limit, offset, verify, cb) {
   }, cb);
 }
 
+//将这个新的区块设置成当前最新的区块
 Blocks.prototype.setLastBlock = function (block) {
   private.lastBlock = block
   if (global.Config.netVersion === 'mainnet') {
@@ -727,6 +730,7 @@ Blocks.prototype.setLastBlock = function (block) {
   global.featureSwitch.enableUIA = global.featureSwitch.enableLongId
 }
 
+//获取当前最新的区块
 Blocks.prototype.getLastBlock = function () {
   return private.lastBlock;
 }
@@ -860,6 +864,8 @@ Blocks.prototype.verifyBlockVotes = function (block, votes, cb) {
   });
 }
 
+//生效刚才验证通过的交易列表，就是对交易涉及的账号进行一些转账等操作，这部分逻辑在 src/base/transaction.js apply 函数中实现。
+// 交易有多种类型，后面再详述。
 Blocks.prototype.applyBlock = function (block, votes, broadcast, saveBlock, callback) {
   private.isActive = true;
   var applyedTrsIdSet = new Set
@@ -897,6 +903,7 @@ Blocks.prototype.applyBlock = function (block, votes, broadcast, saveBlock, call
             if (broadcast) {
               library.logger.info("Block applied correctly with " + block.transactions.length + " transactions");
               votes.signatures = votes.signatures.slice(0, 6);
+              // 广播这个新的区块
               library.bus.message('newBlock', block, votes, true);
             }
             cb();
@@ -1207,12 +1214,14 @@ Blocks.prototype.deleteBlocksBefore = function (block, cb) {
 }
 
 Blocks.prototype.generateBlock = function (keypair, timestamp, cb) {
+  //首先从 transactions 里面获取未确认的交易列表
   var transactions = modules.transactions.getUnconfirmedTransactionList(false, constants.maxTxsPerBlock);
   var ready = [];
   if (library.base.consensus.hasPendingBlock(timestamp)) {
     return setImmediate(cb);
   }
   library.logger.info("generateBlock enter");
+  //从未确认的交易列表中过滤出验证通过的交易列表
   async.eachSeries(transactions, function (transaction, next) {
     modules.accounts.getAccount({ publicKey: transaction.senderPublicKey }, function (err, sender) {
       if (err || !sender) {
@@ -1222,6 +1231,7 @@ Blocks.prototype.generateBlock = function (keypair, timestamp, cb) {
       if (library.base.transaction.ready(transaction, sender)) {
         library.base.transaction.verify(transaction, sender, function (err) {
           if (err) {
+            //未确认的交易验证不通过，从未确认交易列表中去掉
             library.logger.error("Failed to verify transaction " + transaction.id, err);
             modules.transactions.removeUnconfirmedTransaction(transaction.id);
           } else {
@@ -1237,6 +1247,7 @@ Blocks.prototype.generateBlock = function (keypair, timestamp, cb) {
     library.logger.debug("All unconfirmed transactions ready");
     var block;
     try {
+      // 创建包含这些交易列表的新区块，验证区块是否合法
       block = library.base.block.create({
         keypair: keypair,
         timestamp: timestamp,
@@ -1250,6 +1261,7 @@ Blocks.prototype.generateBlock = function (keypair, timestamp, cb) {
     library.logger.info("Generate new block at height " + (private.lastBlock.height + 1));
     async.waterfall([
       function (next) {
+        //验证新区块是否合法
         self.verifyBlock(block, null, function (err) {
           if (err) {
             next("Can't verify generated block: " + err);
@@ -1273,7 +1285,9 @@ Blocks.prototype.generateBlock = function (keypair, timestamp, cb) {
         assert(activeKeypairs && activeKeypairs.length > 0, "Active keypairs should not be empty");
         library.logger.info("get active delegate keypairs len: " + activeKeypairs.length);
         var localVotes = library.base.consensus.createVotes(activeKeypairs, block);
+        //检查该受托人是否有足够的票数，如果票数不够，则不可生成区块。(这个步骤应该提前吧？)
         if (library.base.consensus.hasEnoughVotes(localVotes)) {
+          //通过 block.id 查询本地数据库，如果已经还未存在，则继续进行下面行为
           self.processBlock(block, localVotes, true, true, false, function (err) {
             if (err) {
               return next("Failed to process confirmed block height: " + height + " id: " + id + " error: " + err);
