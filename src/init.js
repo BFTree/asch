@@ -291,6 +291,7 @@ module.exports = function(options, done) {
         var whiteList = scope.config.api.access.whiteList;
         var blackList = scope.config.peers.blackList;
 
+
         var forbidden = isApiOrPeer && ( 
             (whiteList.length > 0 && whiteList.indexOf(ip) < 0) ||
             (blackList.length > 0 && blackList.indexOf(ip) >= 0) );

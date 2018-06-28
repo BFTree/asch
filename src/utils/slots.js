@@ -10,6 +10,7 @@ function beginEpochTime() {
   return d;
 }
 
+//先获取 epochTime ，epochTime 记录从 2016-5-27T20:00:00 后到某一个特定时间经过了多少秒
 function getEpochTime(time) {
   if (time === undefined) {
     time = (new Date()).getTime();
@@ -42,7 +43,7 @@ module.exports = {
     if (epochTime === undefined) {
       epochTime = this.getTime()
     }
-    return Math.floor(epochTime / this.interval);
+    return Math.floor(epochTime / this.interval);//每过10s出现一个新的slot
   },
 
   getSlotTime: function (slot) {

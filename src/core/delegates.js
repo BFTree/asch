@@ -423,6 +423,7 @@ private.getKeysSortByVote = function (cb) {
   });
 }
 
+//获取当前slot的检查受托人列表，如果在配置中该受托人的密钥对的，则进入到『区块的产生流程』
 private.getBlockSlotData = function (slot, height, cb) {
   self.generateDelegateList(height, function (err, activeDelegates) {
     if (err) {
@@ -478,6 +479,7 @@ private.loop = function (cb) {
       return setImmediate(cb);
     }
 
+    //对于注册了受托人的节点，会有一个定时触发器，调用 blocks.js 里面的 generateBlock
     library.sequence.add(function generateBlock (cb) {
       if (slots.getSlotNumber(currentBlockData.time) == slots.getSlotNumber() &&
           modules.blocks.getLastBlock().timestamp < currentBlockData.time) {
@@ -495,6 +497,7 @@ private.loop = function (cb) {
   });
 }
 
+//从配置文件中获取secret(依次读取若干个)，用 secret 生成密钥对(公钥和私钥)
 private.loadMyDelegates = function (cb) {
   var secrets = null;
   if (library.config.forging.secret) {
@@ -504,6 +507,7 @@ private.loadMyDelegates = function (cb) {
   async.eachSeries(secrets, function (secret, cb) {
     var keypair = ed.MakeKeypair(crypto.createHash('sha256').update(secret, 'utf8').digest());
 
+    //用公钥从区块链数据库中获取账号
     modules.accounts.getAccount({
       publicKey: keypair.publicKey.toString('hex')
     }, function (err, account) {
@@ -515,6 +519,7 @@ private.loadMyDelegates = function (cb) {
         return cb("Account " + keypair.publicKey.toString('hex') + " not found");
       }
 
+      //该账号是否是受托人，是受托人才继续进行
       if (account.isDelegate) {
         private.keypairs[keypair.publicKey.toString('hex')] = keypair;
         library.logger.info("Forging enabled on account: " + account.address);
@@ -557,6 +562,8 @@ Delegates.prototype.validateProposeSlot = function (propose, cb) {
   });
 }
 
+//先获取当前受托人列表，按票数排序，获取票数最高的 101 个受托人的公钥。
+// 并且对这些受托人列表进行『随机』排序。这里的随机应该是每个节点一样的随机，不是完全随机。
 // Public methods
 Delegates.prototype.generateDelegateList = function (height, cb) {
   private.getKeysSortByVote(function (err, truncDelegateList) {
@@ -806,6 +813,7 @@ Delegates.prototype.onBind = function (scope) {
   modules = scope;
 }
 
+//当区块链数据库载入完成，开始锻造初始化
 Delegates.prototype.onBlockchainReady = function () {
   private.loaded = true;
 
@@ -815,7 +823,7 @@ Delegates.prototype.onBlockchainReady = function () {
     }
 
     private.loop(function () {
-      setTimeout(nextLoop, 100);
+      setTimeout(nextLoop, 100);//开始进入轮询，每次轮询间隔100ms
     });
 
   });
