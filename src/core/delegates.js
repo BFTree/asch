@@ -500,7 +500,7 @@ private.loop = function (cb) {
 //从配置文件中获取secret(依次读取若干个)，用 secret 生成密钥对(公钥和私钥)
 private.loadMyDelegates = function (cb) {
   var secrets = null;
-  if (library.config.forging.secret) {
+  if (library.config.forging.secret) {//TODO 配置项在哪
     secrets = util.isArray(library.config.forging.secret) ? library.config.forging.secret : [library.config.forging.secret];
   }
 
@@ -813,7 +813,7 @@ Delegates.prototype.onBind = function (scope) {
   modules = scope;
 }
 
-//当区块链数据库载入完成，开始锻造初始化
+//当区块链数据库载入完成，开始锻造forging初始化
 Delegates.prototype.onBlockchainReady = function () {
   private.loaded = true;
 

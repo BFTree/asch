@@ -70,6 +70,7 @@ Round.prototype.calc = function (height) {
   return Math.floor(height / slots.delegates) + (height % slots.delegates > 0 ? 1 : 0);
 }
 
+//根据轮次round从数据库查询投票数
 Round.prototype.getVotes = function (round, cb) {
   library.dbLite.query("select delegate, amount from ( " +
     "select m.delegate, sum(m.amount) amount, m.round from mem_round m " +

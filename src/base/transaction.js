@@ -50,8 +50,9 @@ Transaction.prototype.create = function (data) {
   };
 
   trs = private.types[trs.type].create.call(this, data, trs);
-  trs.signature = this.sign(data.keypair, trs);
+  trs.signature = this.sign(data.keypair, trs);//对交易进行签名
 
+    //如果存在第二签名公私钥对，则进行第二签名
   if (data.sender.secondSignature && data.secondKeypair) {
     trs.signSignature = this.sign(data.secondKeypair, trs);
   }
@@ -77,11 +78,13 @@ Transaction.prototype.attachAssetType = function (typeId, instance) {
   }
 }
 
+//签名，对交易txs转bytes，计算sha256哈希值，然后签名
 Transaction.prototype.sign = function (keypair, trs) {
   var hash = this.getHash(trs);
   return ed.Sign(hash, keypair).toString('hex');
 }
 
+//多重签名，对交易转bytes（根据getBytes（）函数参，决定多重签名），计算sha256哈希值，然后签名
 Transaction.prototype.multisign = function (keypair, trs) {
   var bytes = this.getBytes(trs, true, true);
   var hash = crypto.createHash('sha256').update(bytes).digest();
@@ -119,6 +122,7 @@ Transaction.prototype.getBytes = function (trs, skipSignature, skipSecondSignatu
     var assetBytes = private.types[trs.type].getBytes.call(this, trs, skipSignature, skipSecondSignature);
     var assetSize = assetBytes ? assetBytes.length : 0;
 
+    //TODO 定义buffer长度的这些数字含义
     var bb = new ByteBuffer(1 + 4 + 32 + 32 + 8 + 8 + 64 + 64 + assetSize, true);
     bb.writeByte(trs.type);
     bb.writeInt(trs.timestamp);
@@ -128,7 +132,7 @@ Transaction.prototype.getBytes = function (trs, skipSignature, skipSecondSignatu
       bb.writeByte(senderPublicKeyBuffer[i]);
     }
 
-    if (trs.requesterPublicKey) {
+    if (trs.requesterPublicKey) {;
       var requesterPublicKey = new Buffer(trs.requesterPublicKey, 'hex');
       for (var i = 0; i < requesterPublicKey.length; i++) {
         bb.writeByte(requesterPublicKey[i]);
@@ -137,7 +141,7 @@ Transaction.prototype.getBytes = function (trs, skipSignature, skipSecondSignatu
 
     if (trs.recipientId) {
       if (/^[0-9]{1,20}$/g.test(trs.recipientId)) {
-        var recipient = bignum(trs.recipientId).toBuffer({ size: 8 });
+        var recipient = bignum(trs.recipientId).toBuffer({ size: 8 })
         for (var i = 0; i < 8; i++) {
           bb.writeByte(recipient[i] || 0);
         }
@@ -195,7 +199,7 @@ Transaction.prototype.ready = function (trs, sender) {
     return false;
   }
 
-  return private.types[trs.type].ready.call(this, trs, sender);
+  return private.types[trs.type].ready.call(this, trs, sender);//TODO 这种写法看不懂
 }
 
 Transaction.prototype.process = function (trs, sender, requester, cb) {
@@ -204,7 +208,7 @@ Transaction.prototype.process = function (trs, sender, requester, cb) {
   }
 
   if (!private.types[trs.type]) {
-    return setImmediate(cb, "Unknown transaction type " + trs.type);
+    return setImmediate(cb, "Unknown transaction type " + trs.type);//TODO ?setImmediate
   }
 
   // if (!this.ready(trs, sender)) {
@@ -284,7 +288,7 @@ Transaction.prototype.verify = function (trs, sender, requester, cb) { //inherit
 
   if (global.featureSwitch.enableMoreLockTypes) {
     var lastBlock = modules.blocks.getLastBlock()
-    var isLockedType = ([0, 6, 7, 8, 9, 10, 13, 14].indexOf(trs.type) !== -1)
+    var isLockedType = ([0, 6, 7, 8, 9, 10, 13, 14].indexOf(trs.type) !== -1)//TODO 交易类型数组，哪里定义的
     if (sender.lockHeight && lastBlock && lastBlock.height + 1 <= sender.lockHeight && isLockedType) {
       return cb('Account is locked')
     }
@@ -483,6 +487,7 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
     return setImmediate(cb, "Insufficient balance: " + sender.balance);
   }
 
+  // TODO 没看明白
   this.scope.account.merge(sender.address, {
     balance: -amount,
     blockId: block.id,

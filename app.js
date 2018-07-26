@@ -7,6 +7,7 @@ var async = require('async');
 var Logger = require('./src/logger');
 var init = require('./src/init');
 
+//判断block的payloadLength和trs的payloadLength是否相等
 function verifyGenesisBlock(scope, block) {
   try {
     var payloadHash = crypto.createHash('sha256');

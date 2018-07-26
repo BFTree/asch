@@ -764,6 +764,7 @@ Blocks.prototype.verifyBlock = function (block, votes, cb) {
     return cb("Got exception while verify block signature: " + e.toString());
   }
 
+  //TODO 这是投票提议认可的hash值吗？应该不是，不过这里检查的是区块与区块Id？错误信息是“错误的前一个区块hash”？
   if (block.previousBlock != private.lastBlock.id) {
     modules.delegates.fork(block, 1);
     return cb('Incorrect previous block hash');
@@ -812,6 +813,7 @@ Blocks.prototype.verifyBlock = function (block, votes, cb) {
     totalFee += transaction.fee;
   }
 
+  //TODO 区块hash值验证
   if (payloadHash.digest().toString('hex') !== block.payloadHash) {
     return cb("Invalid payload hash: " + block.id);
   }

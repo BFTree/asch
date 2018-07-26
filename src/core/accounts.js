@@ -259,7 +259,7 @@ private.attachApi = function () {
 }
 
 private.openAccount = function (secret, cb) {
-  var hash = crypto.createHash('sha256').update(secret, 'utf8').digest();
+  var hash = crypto.createHash('sha256').update(secret, 'utf8').digest();//返回的hash是Buffer对象
   var keypair = ed.MakeKeypair(hash);
   publicKey = keypair.publicKey.toString('hex')
   var address = self.generateAddressByPublicKey2(publicKey);

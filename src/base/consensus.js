@@ -14,6 +14,7 @@ function Consensus(scope, cb) {
   cb && setImmediate(cb, null, this);
 }
 
+//创建的投票，带有区块高度、Id和签名信息
 Consensus.prototype.createVotes = function (keypairs, block) {
   var hash = this.getVoteHash(block.height, block.id);
   var votes = {
@@ -24,12 +25,13 @@ Consensus.prototype.createVotes = function (keypairs, block) {
   keypairs.forEach(function (el) {
     votes.signatures.push({
       key: el.publicKey.toString('hex'),
-      sig: ed.Sign(hash, el).toString('hex')
+      sig: ed.Sign(hash, el).toString('hex')//计算得到的哈希值要签名
     });
   });
   return votes;
 }
 
+//投票需要共识节点验证
 Consensus.prototype.verifyVote = function (height, id, voteItem) {
   try {
     var hash = this.getVoteHash(height, id);
@@ -41,6 +43,7 @@ Consensus.prototype.verifyVote = function (height, id, voteItem) {
   }
 }
 
+//以区块高度和区块id，计算sha256哈希值作为投票哈希
 Consensus.prototype.getVoteHash = function (height, id) {
   var bytes = new ByteBuffer();
   bytes.writeLong(height);
@@ -56,6 +59,7 @@ Consensus.prototype.getVoteHash = function (height, id) {
   return crypto.createHash('sha256').update(bytes.toBuffer()).digest();
 }
 
+//超过共识节点总数(101个)2/3 = 68投票通过才算共识成功
 Consensus.prototype.hasEnoughVotes = function (votes) {
   return votes && votes.signatures && votes.signatures.length > slots.delegates * 2 / 3;
 }
@@ -155,6 +159,7 @@ Consensus.prototype.getProposeHash  = function (propose) {
   return crypto.createHash('sha256').update(bytes.toBuffer()).digest();
 }
 
+//标准化投票
 Consensus.prototype.normalizeVotes = function (votes) {
   var report = this.scope.scheme.validate(votes, {
     type: "object",

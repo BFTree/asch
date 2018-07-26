@@ -17,6 +17,7 @@ function Block(scope, cb) {
 // Private methods
 var private = {};
 private.blockStatus = new BlockStatus();
+//从公钥sha256哈希值中取前8位，逆序转换为bignumber，作为地址
 private.getAddressByPublicKey = function (publicKey) {
   var publicKeyHash = crypto.createHash('sha256').update(publicKey, 'hex').digest();
   var temp = new Buffer(8);
@@ -38,7 +39,7 @@ Block.prototype.sortTransactions = function (data) {
       }
       if (b.type == 1) {
         return -1;
-      }
+    }
       return a.type - b.type;
     }
     if (a.amount != b.amount) {
@@ -53,6 +54,7 @@ Block.prototype.create = function (data) {
 
   var nextHeight = (data.previousBlock) ? data.previousBlock.height + 1 : 1;
 
+  //根据出块高度，计算出块奖励
   var reward = private.blockStatus.calcReward(nextHeight),
     totalFee = 0, totalAmount = 0, size = 0;
 
@@ -63,6 +65,7 @@ Block.prototype.create = function (data) {
     var transaction = transactions[i];
     var bytes = this.scope.transaction.getBytes(transaction);
 
+    //不能超过8M
     if (size + bytes.length > constants.maxPayloadLength) {
       break;
     }
@@ -108,7 +111,7 @@ Block.prototype.sign = function (block, keypair) {
 }
 
 Block.prototype.getBytes = function (block) {
-  var size = 4 + 4 + 64 + 4 + 8 + 8 + 8 + 4 + 32 + 32 + 64;
+  var size = 4 + 4 + 64 + 4 + 8 + 8 + 8 + 4 + 32 + 32 + 64;//232，有什么含义？
 
   try {
     var bb = new ByteBuffer(size, true);
@@ -221,7 +224,7 @@ Block.prototype.objectNormalize = function (block) {
       delete block[i];
     }
   }
-
+  //TODO 验证没看明白
   var report = this.scope.scheme.validate(block, {
     type: "object",
     properties: {
@@ -285,6 +288,7 @@ Block.prototype.objectNormalize = function (block) {
 
   try {
     for (var i = 0; i < block.transactions.length; i++) {
+        //TODO 对交易tx的标准化处理过程没看到
       block.transactions[i] = this.scope.transaction.objectNormalize(block.transactions[i]);
     }
   } catch (e) {
@@ -298,6 +302,7 @@ Block.prototype.getId = function (block) {
   if (global.featureSwitch.enableLongId) {
     return this.getId2(block)
   }
+  //这就是取区块sha256前8位逆序为bignumber，与公钥sha256哈希值获取地址的算法一样
   var hash = crypto.createHash('sha256').update(this.getBytes(block)).digest();
   var temp = new Buffer(8);
   for (var i = 0; i < 8; i++) {
